@@ -2,92 +2,68 @@ extends HTTPRequest
 
 export(String) var gameId
 export(String) var privateKey
+export(String) var username
+export(String) var user_token
+
 
 const base_link = "https://api.gamejolt.com/api/game/"
 
-signal login(username, token)
-
-func _ready():
-	connect("request_completed", self, "_on_request_completed")
-	
-
-func _on_request_completed(result, response_code, headers, body):
-	print(body.get_string_from_ascii())
-	
-func _auth_user(username, user_token):
-	var urlContruct = urlFormat(base_link + "v1" + "/users/auth/", {
-		"game_id":	gameId,
-		"username":	username,
+func request(url: String, custom_headers:=PoolStringArray(), ssl_validate_domain:=true, method:=0, request_data:=""):
+	var formated_URL = url_format(url, {
+		"game_id":		gameId,
+		"username":		username,
 		"user_token":	user_token
 	})
 	
-	var finalUrl = signUrl(urlContruct)
+	if (privateKey):
+		formated_URL = sign_url(formated_URL)
 	
-	print(finalUrl)
-	request(finalUrl)
+	.request(formated_URL, custom_headers, ssl_validate_domain, method, request_data)
+
+
+func auth_user(username, user_token):
+	request(base_link + "v1" + "/users/auth/")
 	
-func _add_achieved(username, user_token, trophy_id):
-	var urlContruct = urlFormat(base_link + "v1_2" + "/trophies/add-achieved/", {
-		"game_id":	gameId,
-		"username":	username,
-		"user_token":	user_token,
-		"trophy_id":	String(trophy_id)
-	})
+func add_achieved(username, user_token, trophy_id):
+	request(url_format(
+		base_link + "v1_2" + "/trophies/add-achieved/", { "trophy_id": String(trophy_id) }
+	))
 	
-	var finalUrl = signUrl(urlContruct)
+func remove_achieved(username, user_token, trophy_id):
+	request(url_format(
+		base_link + "v1_2" + "/trophies/remove-achieved/", { "trophy_id": String(trophy_id) }
+	))
 	
-	request(finalUrl)
 	
-func _remove_achieved(username, user_token, trophy_id):
-	var urlContruct = urlFormat(base_link + "v1_2" + "/trophies/remove-achieved/", {
-		"game_id":	gameId,
-		"username":	username,
-		"user_token":	user_token,
-		"trophy_id":	String(trophy_id)
-	})
+func fetch_achieved(username, user_token, trophy_id=null, achieved=null):
+	var parameters = {}
+	if (trophy_id): parameters["trophy_id"] = trophy_id
+	if (achieved): parameters["achived"] = achieved
 	
-	var finalUrl = signUrl(urlContruct)
+	request(url_format(base_link + "v1" + "/trophies/", parameters))
 	
-	request(finalUrl)
 	
-func _fetch_achieved(username, user_token, trophy_id='1', achieved=false):
-	var urlContruct = urlFormat(base_link + "v1" + "/trophies/", {
-		"game_id":	gameId,
-		"username":	username,
-		"user_token":	user_token
-	})
-	#urlContruct     = urlContruct + "&achieved="   + String(achieved)
-	#urlContruct     = urlContruct + "&trophy_id="  + String(trophy_id)
+func open_session(username, user_token):
+	request(base_link + "v1" + "/sessions/open/")
 	
-	var finalUrl = signUrl(urlContruct)
+func url_format (base: String, args: Dictionary = {}) -> String:
 	
-	print(finalUrl)
-	request(finalUrl)
+	var link = base
 	
-func _open_session(username, user_token):
-	var urlContruct = urlFormat(base_link + "v1" + "/sessions/open/", {
-		"game_id": gameId,
-		"username": username,
-		"user_token": user_token	
-	})
-	
-	var finalUrl = signUrl(urlContruct)
-	
-	print(finalUrl)
-	request(finalUrl)
-	
-func urlFormat (base: String, args: Dictionary = {}) -> String:
-	var link = base + "?"
+	if (!base.match("\\?")):
+		link += "?"
+	else:
+		link += "&"
 	
 	for key in args:
-		link += key.http_escape() + "=" + args[key].http_escape() + "&"
+		link += String(key).strip_edges().http_escape() + "=" + String(args[key]).strip_edges().http_escape() + "&"
 	
 	link = link.rstrip("&")
 	
 	return link
 
-func signUrl(url: String) -> String:
+func sign_url(url: String) -> String:
 	var signature = url + privateKey
 	signature = signature.sha1_text().http_escape()
-	var finalUrl = url + "&signature=" + signature
-	return finalUrl
+	
+	return url + "&signature=" + signature
