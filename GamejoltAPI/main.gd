@@ -5,11 +5,9 @@ extends EditorPlugin
 func _enter_tree():
 	add_custom_type("GameJoltAPI", "HTTPRequest", preload("API.gd"), preload("gamejolt.png"))
 	add_autoload_singleton("GameJoltAPI", "res://addons/GamejoltAPI/API.gd")
-	
 
 	add_custom_project_setting("GameJoltAPI/GameID", "", TYPE_STRING)
 	add_custom_project_setting("GameJoltAPI/PrivateKey", "", TYPE_STRING)
-	
 	
 	var error := ProjectSettings.save()
 	if error: push_error("Encountered error %d when saving project settings." % error)
