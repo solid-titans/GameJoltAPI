@@ -1,44 +1,61 @@
 extends HTTPRequest
 
-export(String) var username
-export(String) var user_token
+export(String) var username   #Use auth_user to instead of changing this
+export(String) var user_token #This one too
 
-const base_link = "https://api.gamejolt.com/api/game/"
-var gameID : String
-var privateKey : String
+const BASE_LINK = "https://api.gamejolt.com/api/game/"
+
+var gameID : String     #Look at Project Settings
+var privateKey : String #to change this two variables
+
+var request_queue = {
+	"counter": 0,  #The number of requests done (used to define the ID's)
+	"requests": [] #The request queue
+}
+
+signal api_request_completed(id, response_code, data)
+
+
+#----------------- Functionality functions -----------------#
+################ Do not use this functions ################
 
 func _ready():
 	connect("request_completed", self, "_on_request_completed")
 
 
-func _on_request_completed(result: int, response_code: int, headers: PoolStringArray, body: PoolByteArray):
-	print("Request completed! (Response code = %d)" % response_code)
-
-
-func request(url: String, custom_headers:=PoolStringArray(), ssl_validate_domain:=true, method:=0, request_data:=""):
+func _on_request_completed(result, response_code, headers, body):
+	var response = request_queue.requests.pop_front() #Get the request metadata
 	
-	assert(username, "Username is null")
-	assert(user_token, "User token is null")
-	assert(ProjectSettings.has_setting("GameJoltAPI/GameID"), "Could not find GameID setting")
-	assert(ProjectSettings.has_setting("GameJoltAPI/PrivateKey"), "Could not find PrivateKey setting")
+	if (request_queue.requests.size() > 0):
+		#Get the next request and do a request
+		var next_request = request_queue.requests.front()
+		request(next_request.url)
+
 	
-	privateKey = ProjectSettings.get_setting("GameJoltAPI/PrivateKey")
-	gameID = ProjectSettings.get_setting("GameJoltAPI/GameID")
+	emit_signal("api_request_completed", response.id, response_code, JSON.parse(body))
+
+func _make_request(url: String) -> int:
+	"""Add the request to the queue and return request id"""
+	request_queue.counter += 1
+	
+	var formated_URL = _url_format(url, {"format": "json"})
+	
+	formated_URL = _sign_url(formated_URL)
+	
+	
+	if (request_queue.requests.size() == 0):
+		request(url)
 		
-	
-	var formated_URL = url_format(url, {
-		"game_id":		gameID,
-		"username":		username,
-		"user_token":	user_token
+	request_queue.requests.push_back({
+		"id": request_queue.counter,
+		"url": url
 	})
 	
-	formated_URL = sign_url(formated_URL)
-	
-	print("Making request to GameJolt!...")
-	return .request(formated_URL, custom_headers, ssl_validate_domain, method, request_data)
+	return request_queue.counter
 
 
-func url_format (base: String, args: Dictionary = {}) -> String:
+func _url_format (base: String, args: Dictionary = {}) -> String:
+	"""Get an url and arguments and return a formated url"""
 	
 	var link = base
 	
@@ -51,47 +68,76 @@ func url_format (base: String, args: Dictionary = {}) -> String:
 	
 	for key in args:
 		if (args[key]):
-			link += String(key).strip_edges().http_escape() + "=" + String(args[key]).strip_edges().http_escape() + "&"
+			link += String(key).http_escape() + "=" + String(args[key]).http_escape() + "&"
 	
 	link = link.rstrip("&")
 	
 	return link
 
-func sign_url(url: String) -> String:
+
+func _sign_url(url: String) -> String:
 	var signature = url + privateKey
 	signature = signature.sha1_text()
 	
-	return url_format(url, {"signature": signature})
-	
-	
-func login(username: String, user_token: String):
-	self.username = username
-	self.user_token = user_token
-	
-	return auth_user()
+	return _url_format(url, {"signature": signature})
 
-func auth_user():
-	return request(base_link + "v1" + "/users/auth/")
+#----------------- API functions -----------------#
+
+func auth_user(username: String, user_token: String) -> int:
+	"""Login the player with the username and user_token"""
+	return _make_request(_url_format(BASE_LINK + "v1" + "/users/auth/", {
+		"username":		username,
+		"user_token":	user_token
+	}))
+
+
+func add_achieved(trophy_id: int) -> int:
+	"""Add a trophy to the player"""
 	
-func add_achieved(trophy_id):
-	return request(url_format(
-		base_link + "v1_2" + "/trophies/add-achieved/", { "trophy_id": String(trophy_id) }
+	return _make_request(_url_format(
+		BASE_LINK + "v1_2" + "/trophies/add-achieved/", { 
+			"trophy_id":	String(trophy_id),
+			"game_id":		gameID,
+			"username":		username,
+			"user_token":	user_token
+		}
 	))
 	
-func remove_achieved(trophy_id):
-	return request(url_format(
-		base_link + "v1_2" + "/trophies/remove-achieved/", { "trophy_id": String(trophy_id) }
-	))
+func remove_achieved(trophy_id: int ) -> int:
+	"""Remove a trophy of the player"""
+	return _make_request(_url_format(
+		BASE_LINK + "v1_2" + "/trophies/remove-achieved/", {
+			"trophy_id": String(trophy_id),
+			"game_id":		gameID,
+			"username":		username,
+			"user_token":	user_token
+		})
+	)
 	
 	
-func fetch_achieved(trophy_id=null, achieved=null):
-	var parameters = {}
-	if (trophy_id): parameters["trophy_id"] = trophy_id
-	if (achieved): parameters["achived"] = achieved
+func fetch_achieved(trophy_id: int, achieved: bool) -> int:
+	"""
+		Fetch whatever if a trophy is achived or not
+		@params:
+			*tropy_id: 
+				- The target trophy id 
+				- Return all trophyies if null
+			*achived:
+				- Filters the target trophyes
+				- Return all if null
+				- Return achived if true
+				- Return not achived if false
+	"""
+	return _make_request(_url_format(BASE_LINK + "v1" + "/trophies/", {
+		"trophy_id":	trophy_id,
+		"achived":		achieved,
+		"game_id":		gameID,
+		"username":		username,
+		"user_token":	user_token
+	}))
 	
-	return request(url_format(base_link + "v1" + "/trophies/", parameters))
 	
-	
-func open_session():
-	return request(base_link + "v1" + "/sessions/open/")
+func open_session() -> int:
+	"""Open the player session"""
+	return _make_request(BASE_LINK + "v1" + "/sessions/open/")
 	

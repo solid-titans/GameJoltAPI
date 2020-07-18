@@ -3,7 +3,6 @@ extends EditorPlugin
 
 
 func _enter_tree():
-	add_custom_type("GameJoltAPI", "HTTPRequest", preload("API.gd"), preload("gamejolt.png"))
 	add_autoload_singleton("GameJoltAPI", "res://addons/GamejoltAPI/API.gd")
 
 	add_custom_project_setting("GameJoltAPI/GameID", "", TYPE_STRING)
@@ -29,7 +28,6 @@ func add_custom_project_setting(name: String, default_value, type: int, hint: in
 	ProjectSettings.set_initial_value(name, default_value)
 
 func _exit_tree():
-	remove_custom_type("GameJoltAPI")
 	remove_autoload_singleton("GameJoltAPI")
 	ProjectSettings.clear("GameJoltAPI/PrivateKey")
 	ProjectSettings.clear("GameJoltAPI/GameID")
