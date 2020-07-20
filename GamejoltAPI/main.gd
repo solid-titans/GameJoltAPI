@@ -7,10 +7,11 @@ func _enter_tree():
 
 	add_custom_project_setting("GameJoltAPI/GameID", "", TYPE_STRING)
 	add_custom_project_setting("GameJoltAPI/PrivateKey", "", TYPE_STRING)
+	add_custom_project_setting("GameJoltAPI/PrallelRequestsLimit", 50, TYPE_INT)
+	add_custom_project_setting("GameJoltAPI/Verbose", false, TYPE_BOOL)
 	
 	var error := ProjectSettings.save()
 	if error: push_error("Encountered error %d when saving project settings." % error)
-	
 
 func add_custom_project_setting(name: String, default_value, type: int, hint: int = PROPERTY_HINT_NONE, hint_string: String = "") -> void:
 
@@ -31,4 +32,7 @@ func _exit_tree():
 	remove_autoload_singleton("GameJoltAPI")
 	ProjectSettings.clear("GameJoltAPI/PrivateKey")
 	ProjectSettings.clear("GameJoltAPI/GameID")
+	ProjectSettings.clear("GameJoltAPI/PrallelRequestsLimit")
+	ProjectSettings.clear("GameJoltAPI/Verbose")
+	
 	

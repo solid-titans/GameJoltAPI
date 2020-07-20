@@ -5,57 +5,78 @@ export(String) var user_token #This one too
 
 const BASE_LINK = "https://api.gamejolt.com/api/game/"
 
-var gameID : String     #Look at Project Settings
-var privateKey : String #to change this two variables
+#Change this on Project Settings
+var gameID : String       = ProjectSettings.get_setting("GameJoltAPI/GameID")
+var privateKey : String   = ProjectSettings.get_setting("GameJoltAPI/PrivateKey")
+var parrallel_limit : int = ProjectSettings.get_setting("GameJoltAPI/PrallelRequestsLimit")
+var verbose: bool         = ProjectSettings.get_setting("GameJoltAPI/Verbose")
 
-var request_queue = {
+var requests = {
 	"counter": 0,  #The number of requests done (used to define the ID's)
-	"requests": [] #The request queue
+	"nodes": {},   #The request Nodes
+	"queue": [],   #Requests that are waiting to others to finish
 }
 
-signal api_request_completed(id, response_code, data)
+signal api_request_completed(id, type, response_code, data)
 
 
 #----------------- Functionality functions -----------------#
-################ Do not use this functions ################
+######################## Do not use! ########################
 
-func _ready():
-	connect("request_completed", self, "_on_request_completed")
-
-
-func _on_request_completed(result, response_code, headers, body):
-	var response = request_queue.requests.pop_front() #Get the request metadata
+func on_request_completed(result, response_code, headers, body, id):
+	_print_verbose("Request (ID = " + id + ") completed with code: " + response_code)
 	
-	if (request_queue.requests.size() > 0):
-		#Get the next request and do a request
-		var next_request = request_queue.requests.front()
-		request(next_request.url)
-
+	if requests.queue.size() > 0: 
+		var next = requests.queue.pop_front()
+		_make_request(next.url, next.type)
 	
-	emit_signal("api_request_completed", response.id, response_code, JSON.parse(body))
+	var request_node = requests.nodes.get(id)
+	request_node.node.disconnect("request_completed", self, "on_request_completed")
+	
+	var parsed_body = JSON.parse(body.get_string_from_utf8())
+	emit_signal("api_request_completed", id, request_node.type, response_code, parsed_body)
+	emit_signal("api_" + request_node.type, id, response_code, parsed_body)
+	request_node.node.queue_free()
 
-func _make_request(url: String) -> int:
-	"""Add the request to the queue and return request id"""
-	request_queue.counter += 1
+
+func _make_request(url: String, type:="unknown") -> int:
+	#Add the request to the queue and return request id
+	
+	var id = requests.counter
+	requests.counter += 1
 	
 	var formated_URL = _url_format(url, {"format": "json"})
+	_print_verbose("Formated URL: " + formated_URL)
 	
 	formated_URL = _sign_url(formated_URL)
+	_print_verbose("Signed URL: " + formated_URL)
 	
-	
-	if (request_queue.requests.size() == 0):
-		request(url)
+	if requests.nodes.size() < parrallel_limit:
+		#Create a new instace of HTTPRequest and make a request for parallelization
+		var node = HTTPRequest.new()
+		node.request(url)
+		add_child(node)
+		node.connect("request_completed", self, "on_request_completed", id)
+		_print_verbose("New request (ID: " + id + ")!")
 		
-	request_queue.requests.push_back({
-		"id": request_queue.counter,
-		"url": url
-	})
+		requests.nodes[id] = ({
+			"url": url,
+			"type": type,
+			"node": node,
+		})
+	else:
+		#If the limit was reached, add to queue
+		requests.queue.push_back({
+			"url": url,
+			"type": type,
+		})
+		_print_verbose("Added request to queue")
 	
-	return request_queue.counter
+	return id
 
 
 func _url_format (base: String, args: Dictionary = {}) -> String:
-	"""Get an url and arguments and return a formated url"""
+	#Get an url and arguments and return a formated url
 	
 	var link = base
 	
@@ -80,11 +101,16 @@ func _sign_url(url: String) -> String:
 	signature = signature.sha1_text()
 	
 	return _url_format(url, {"signature": signature})
+	
+	
+func _print_verbose(msg):
+	if verbose: print("[GameJoltAPI] " + msg)
 
 #----------------- API functions -----------------#
 
 func auth_user(username: String, user_token: String) -> int:
-	"""Login the player with the username and user_token"""
+	#Login the player with the username and user_token
+	
 	return _make_request(_url_format(BASE_LINK + "v1" + "/users/auth/", {
 		"username":		username,
 		"user_token":	user_token
@@ -92,7 +118,7 @@ func auth_user(username: String, user_token: String) -> int:
 
 
 func add_achieved(trophy_id: int) -> int:
-	"""Add a trophy to the player"""
+	#Add a trophy to the player
 	
 	return _make_request(_url_format(
 		BASE_LINK + "v1_2" + "/trophies/add-achieved/", { 
@@ -103,8 +129,8 @@ func add_achieved(trophy_id: int) -> int:
 		}
 	))
 	
-func remove_achieved(trophy_id: int ) -> int:
-	"""Remove a trophy of the player"""
+func remove_achieved(trophy_id: int) -> int:
+	#Remove a trophy of the player
 	return _make_request(_url_format(
 		BASE_LINK + "v1_2" + "/trophies/remove-achieved/", {
 			"trophy_id": String(trophy_id),
@@ -116,18 +142,17 @@ func remove_achieved(trophy_id: int ) -> int:
 	
 	
 func fetch_achieved(trophy_id: int, achieved: bool) -> int:
-	"""
-		Fetch whatever if a trophy is achived or not
-		@params:
-			*tropy_id: 
-				- The target trophy id 
-				- Return all trophyies if null
-			*achived:
-				- Filters the target trophyes
-				- Return all if null
-				- Return achived if true
-				- Return not achived if false
-	"""
+	#	Fetch whatever if a trophy is achived or not
+	#	@params:
+	#		*tropy_id: 
+	#			- The target trophy id 
+	#			- Return all trophyies if null
+	#		*achived:
+	#			- Filters the target trophyes
+	#			- Return all if null
+	#			- Return achived if true
+	#			- Return not achived if false
+	
 	return _make_request(_url_format(BASE_LINK + "v1" + "/trophies/", {
 		"trophy_id":	trophy_id,
 		"achived":		achieved,
@@ -138,6 +163,6 @@ func fetch_achieved(trophy_id: int, achieved: bool) -> int:
 	
 	
 func open_session() -> int:
-	"""Open the player session"""
+	#Open the player session
 	return _make_request(BASE_LINK + "v1" + "/sessions/open/")
 	
