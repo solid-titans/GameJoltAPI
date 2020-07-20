@@ -1,18 +1,20 @@
-export(String) var username   #Use _auth_user to instead of changing this
-export(String) var user_token #This one too
+extends Node
+
+var username   #Use _auth_user to instead of changing this
+var user_token #This one too
 
 const BASE_LINK = "https://api.gamejolt.com/api/game/"
 
 #Change this on Project Settings
 var gameID          : String  = ProjectSettings.get_setting("GameJoltAPI/GameID")
 var privateKey      : String  = ProjectSettings.get_setting("GameJoltAPI/PrivateKey")
-var parrallel_limit : int     = ProjectSettings.get_setting("GameJoltAPI/PrallelRequestsLimit")
+var parrallel_limit : int     = ProjectSettings.get_setting("GameJoltAPI/ParallelRequestsLimit")
 var verbose         : bool    = ProjectSettings.get_setting("GameJoltAPI/Verbose")
 
 var requests = {
-	"counter": 0,  #The number of requests done (used to define the ID's)
-	"nodes": {},   #The request Nodes
-	"queue": [],   #Requests that are waiting to others to finish
+	"counter" : 0,  #The number of requests done (used to define the ID's)
+	"nodes"   : {},   #The request Nodes
+	"queue"   : [],   #Requests that are waiting to others to finish
 }
 
 # This signal is called every request is completed, try to use the other ones instead.
@@ -37,15 +39,22 @@ signal api_fetch_user_data_completed(id, response_code, data)
 
 func _auth_user(username: String, user_token: String) -> int:
 	#Login the player with the username and user_token
+	self.username   = username
+	self.user_token = user_token
 	
 	return make_request(url_format(BASE_LINK + "v1" + "/users/auth/", {
+		"game_id":      gameID,
 		"username":		username,
 		"user_token":	user_token
 	}), "auth_user")
 
 func _open_session() -> int:
-	#Open the player session
-	return make_request(BASE_LINK + "v1" + "/sessions/open/", "open_session")
+	# Open the player session
+	return make_request(url_format(BASE_LINK + "v1" + "/sessions/open/", {
+		'game_id'    : gameID,
+		'username'   : username,
+		'user_token' : user_token
+		}), "open_session")
 
 func _ping_session(status: String) -> int:
 	# Ping the session
@@ -154,23 +163,20 @@ func _add_achieved(trophy_id: int) -> int:
 	
 	return make_request(url_format(
 		BASE_LINK + "v1_2" + "/trophies/add-achieved/", { 
-			"trophy_id":	String(trophy_id),
-			"game_id":		gameID,
-			"username":		username,
-			"user_token":	user_token
-		}
-	))
+			"game_id"     : gameID,
+			"username"    : username,
+			"user_token"  : user_token,
+			"trophy_id"   : trophy_id
+		}), "add_achieved")
 	
 func _remove_achieved(trophy_id: int) -> int:
 	#Remove a trophy of the player
-	return make_request(url_format(
-		BASE_LINK + "v1_2" + "/trophies/remove-achieved/", {
-			"trophy_id": String(trophy_id),
-			"game_id":		gameID,
-			"username":		username,
-			"user_token":	user_token
-		})
-	)
+	return make_request(url_format( BASE_LINK + "v1_2" + "/trophies/remove-achieved/", {
+			"game_id"    : gameID,
+			"username"   : username,
+			"user_token" : user_token,
+			"trophy_id"  : trophy_id
+		}), "remove_achieved")
 	
 
 func _fetch_user_data(user_ids: String) -> int:
@@ -184,41 +190,19 @@ func _fetch_user_data(user_ids: String) -> int:
 #----------------- Functionality functions -----------------#
 ######################## Do not use! ########################
 
-func on_request_completed(result, response_code, headers, body, id):
-	print_verbose("Request (ID = " + id + ") completed with code: " + response_code)
+func add_request_to_list (url: String, type: String, id: int = -1) -> int:
+	#Add a request to the queue or parallel list
+	if id == -1:
+		id = requests.counter
+		requests.counter += 1
 	
-	if requests.queue.size() > 0: 
-		var next = requests.queue.pop_front()
-		make_request(next.url, next.type)
-	
-	var request_node = requests.nodes.get(id)
-	request_node.node.disconnect("request_completed", self, "on_request_completed")
-	
-	var parsed_body = JSON.parse(body.get_string_from_utf8())
-	emit_signal("api_request_completed", id, request_node.type, response_code, parsed_body)
-	emit_signal("api_" + request_node.type + "_completed", id, response_code, parsed_body)
-	request_node.node.queue_free()
-
-
-func make_request(url: String, type:="unknown") -> int:
-	#Add the request to the queue and return request id
-	
-	var id = requests.counter
-	requests.counter += 1
-	
-	var formated_URL = url_format(url, {"format": "json"})
-	print_verbose("Formated URL: " + formated_URL)
-	
-	formated_URL = sign_url(formated_URL)
-	print_verbose("Signed URL: " + formated_URL)
-	
-	if requests.nodes.size() < parrallel_limit:
-		#Create a new instace of HTTPRequest and make a request for parallelization
+	if parrallel_limit <= 0 or requests.nodes.size() < parrallel_limit:
+		#Create a new instace of HTTPRequest for parallelization
 		var node = HTTPRequest.new()
-		node.request(url)
 		add_child(node)
-		node.connect("request_completed", self, "on_request_completed", id)
-		print_verbose("New request (ID: " + id + ")!")
+		node.request(url)
+		node.connect("request_completed", self, "on_request_completed", [id])
+		print_verbose("New request (ID: " + String(id) + ")!")
 		
 		requests.nodes[id] = ({
 			"url": url,
@@ -228,12 +212,41 @@ func make_request(url: String, type:="unknown") -> int:
 	else:
 		#If the limit was reached, add to queue
 		requests.queue.push_back({
+			"id": id,
 			"url": url,
 			"type": type,
 		})
 		print_verbose("Added request to queue")
-	
+		
 	return id
+
+func on_request_completed(result, response_code, headers, body, id):
+	print_verbose("Request (ID = " + String(id) + ") completed with code: " + String(response_code) +
+	"(Result = " + String(result) + ")")
+
+	var request_node = requests.nodes.get(id)
+	requests.nodes.erase(id)
+	request_node.node.disconnect("request_completed", self, "on_request_completed")
+	
+	emit_signal("api_request_completed", id, request_node.type, response_code, body)
+	emit_signal("api_" + request_node.type + "_completed", id, response_code, body)
+	request_node.node.queue_free()
+	
+	if requests.queue.size() > 0: 
+		var next = requests.queue.pop_front()
+		add_request_to_list(next.url, next.type, next.id)
+
+func make_request(url: String, type: String) -> int:
+	#Add the request to the queue and return request id
+	
+	var formated_URL = url
+	if formated_URL.find("format") == -1:
+		formated_URL = url_format(url, {"format": "json"})
+	
+	formated_URL = sign_url(formated_URL)
+	print_verbose("Final URL: " + formated_URL)
+	
+	return add_request_to_list(formated_URL, type)
 
 
 func url_format (base: String, args: Dictionary = {}) -> String:
