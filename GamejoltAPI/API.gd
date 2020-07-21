@@ -10,6 +10,7 @@ var gameID          : String  = ProjectSettings.get_setting("GameJoltAPI/GameID"
 var privateKey      : String  = ProjectSettings.get_setting("GameJoltAPI/PrivateKey")
 var parrallel_limit : int     = ProjectSettings.get_setting("GameJoltAPI/ParallelRequestsLimit")
 var verbose         : bool    = ProjectSettings.get_setting("GameJoltAPI/Verbose")
+var multithread     : bool    = ProjectSettings.get_setting("GameJoltAPI/Multithread")
 
 var requests = {
 	"counter" : 0,  #The number of requests done (used to define the ID's)
@@ -31,7 +32,7 @@ signal api_fetch_score_completed(id, response_code, data)
 signal api_score_tables_completed(id, response_code, data)
 
 signal api_fetch_achieved_completed(id, response_code, data)
-signal api_add_achieved(id, response_code, data)
+signal api_add_achieved_completed(id, response_code, data)
 signal api_remove_achieved_completed(id, response_code, data)
 signal api_fetch_user_data_completed(id, response_code, data)
 
@@ -199,6 +200,7 @@ func add_request_to_list (url: String, type: String, id: int = -1) -> int:
 	if parrallel_limit <= 0 or requests.nodes.size() < parrallel_limit:
 		#Create a new instace of HTTPRequest for parallelization
 		var node = HTTPRequest.new()
+		node.use_threads = multithread
 		add_child(node)
 		node.request(url)
 		node.connect("request_completed", self, "on_request_completed", [id])
