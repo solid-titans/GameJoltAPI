@@ -1,8 +1,8 @@
-[gd_scene load_steps=7 format=2]
+[gd_scene load_steps=6 format=2]
 
 [ext_resource path="res://addons/GamejoltAPI/resources/GameJoltResources/bronze.png" type="Texture" id=1]
 [ext_resource path="res://addons/GamejoltAPI/resources/WinTrophy/TrophyModel.png" type="Texture" id=2]
-[ext_resource path="res://addons/GamejoltAPI/resources/GameJoltResources/GameJoltInspired.ttf" type="DynamicFontData" id=3]
+[ext_resource path="res://addons/GamejoltAPI/resources/GameJoltResources/GameJoltFont.tres" type="DynamicFont" id=3]
 [ext_resource path="res://addons/GamejoltAPI/resources/WinTrophy/WinTrophy.gd" type="Script" id=4]
 
 [sub_resource type="Animation" id=1]
@@ -20,13 +20,6 @@ tracks/0/keys = {
 "update": 0,
 "values": [ Vector2( 0, -100 ), Vector2( 0, 0 ), Vector2( 0, 0 ), Vector2( 0, -100 ) ]
 }
-
-[sub_resource type="DynamicFont" id=2]
-outline_size = 2
-outline_color = Color( 0.270588, 0.498039, 0.435294, 1 )
-extra_spacing_char = 1
-extra_spacing_space = 2
-font_data = ExtResource( 3 )
 
 [node name="WinTrophy" type="Node2D"]
 script = ExtResource( 4 )
@@ -52,7 +45,7 @@ margin_left = -40.0
 margin_top = -32.0
 margin_right = 128.0
 margin_bottom = 28.0
-custom_fonts/font = SubResource( 2 )
+custom_fonts/font = ExtResource( 3 )
 custom_colors/font_color = Color( 0.843137, 0.996078, 0.113725, 1 )
 text = "Congratulations you won a trophy!"
 autowrap = true
