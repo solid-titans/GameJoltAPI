@@ -1,40 +1,26 @@
-extends Node
+extends "GameJoltAPIBaseClass.gd"
 
-var username   #Use _auth_user to instead of changing this
-var user_token #This one too
 
-const BASE_LINK = "https://api.gamejolt.com/api/game/"
-
-#Change this on Project Settings
-var gameID          : String  = ProjectSettings.get_setting("GameJoltAPI/GameID")
-var privateKey      : String  = ProjectSettings.get_setting("GameJoltAPI/PrivateKey")
-var parrallel_limit : int     = ProjectSettings.get_setting("GameJoltAPI/ParallelRequestsLimit")
-var verbose         : bool    = ProjectSettings.get_setting("GameJoltAPI/Verbose")
-var multithread     : bool    = ProjectSettings.get_setting("GameJoltAPI/Multithread")
-
-var requests = {
-	"counter" : 0,  #The number of requests done (used to define the ID's)
-	"nodes"   : {},   #The request Nodes
-	"queue"   : [],   #Requests that are waiting to others to finish
-}
+# GameJolt server require to ping every 120s to make sure you still online
+var session_timer := Timer.new()
 
 # This signal is called every request is completed, try to use the other ones instead.
-signal api_request_completed(id, type, response_code, data) 
+signal api_request_completed(type, data, id, response_code, result) 
 
-signal api_auth_user_completed(id, response_code, data)
-signal api_open_session_completed(id, response_code, data)
-signal api_ping_session_completed(id, response_code, data)
-signal api_check_session_completed(id, response_code, data)
-signal api_close_session_completed(id, response_code, data)
-signal api_add_score_completed(id, response_code, data)
-signal api_score_get_rank_completed(id, response_code, data)
-signal api_fetch_score_completed(id, response_code, data)
-signal api_score_tables_completed(id, response_code, data)
+signal api_auth_user_completed(data, id, response_code, result)
+signal api_open_session_completed(data, id, response_code, result)
+signal api_ping_session_completed(data, id, response_code, result)
+signal api_check_session_completed(data, id, response_code, result)
+signal api_close_session_completed(data, id, response_code, result)
+signal api_add_score_completed(data, id, response_code, result)
+signal api_score_get_rank_completed(data, id, response_code, result)
+signal api_fetch_score_completed(data, id, response_code, result)
+signal api_score_tables_completed(data, id, response_code, result)
 
-signal api_fetch_achieved_completed(id, response_code, data)
-signal api_add_achieved_completed(id, response_code, data)
-signal api_remove_achieved_completed(id, response_code, data)
-signal api_fetch_user_data_completed(id, response_code, data)
+signal api_fetch_achieved_completed(data, id, response_code, result)
+signal api_add_achieved_completed(data, id, response_code, result)
+signal api_remove_achieved_completed(data, id, response_code, result)
+signal api_fetch_user_data_completed(data, id, response_code, result)
 
 #----------------- API functions -----------------#
 
@@ -44,24 +30,26 @@ func _auth_user(username: String, user_token: String) -> int:
 	self.user_token = user_token
 	
 	return make_request(url_format(BASE_LINK + "v1" + "/users/auth/", {
-		"game_id":      gameID,
+		"game_id":      GAME_ID,
 		"username":		username,
 		"user_token":	user_token
 	}), "auth_user")
 
 func _open_session() -> int:
 	# Open the player session
-	return make_request(url_format(BASE_LINK + "v1" + "/sessions/open/", {
-		'game_id'    : gameID,
+	var id = make_request(url_format(BASE_LINK + "v1" + "/sessions/open/", {
+		'game_id'    : GAME_ID,
 		'username'   : username,
 		'user_token' : user_token
-		}), "open_session")
+	}), "open_session")
 
-func _ping_session(status: String) -> int:
+	return id
+
+func _ping_session(status:= "") -> int:
 	# Ping the session
 	# Valid values for status: "active" and "idle"
 	return make_request(url_format(BASE_LINK + "v1" + "/sessions/ping/", {
-		"game_id"    : gameID,
+		"game_id"    : GAME_ID,
 		"username"   : username,
 		"user_token" : user_token,
 		"status"     : status
@@ -70,14 +58,14 @@ func _ping_session(status: String) -> int:
 func _check_session() -> int:
 	# Check what game the player is current playing
 	return make_request(url_format(BASE_LINK + "v1_2" + "/sessions/check/", {
-		"game_id"    : gameID,
+		"game_id"    : GAME_ID,
 		"username"   : username,
 	}), "check_session")
 
 func _close_session() -> int:
 	# Close the current session for the game
 	return make_request(url_format(BASE_LINK + "v1_2" + "/sessions/close/", {
-		"game_id"    : gameID,
+		"game_id"    : GAME_ID,
 		"username"   : username,
 	}), "close_session")
 
@@ -88,7 +76,7 @@ func _add_score(use_players_credentials: bool, guest: String, score: String, sor
 	# If you choose to not use the players credentials you can choose a name for the player
 
 	var parameters = {
-		"game_id"    : gameID,
+		"game_id"    : GAME_ID,
 		"score"      : score,
 		"sort"       : sort,
 		"extra_data" : extra_data,
@@ -107,7 +95,7 @@ func _score_get_rank(table_id: int) -> int:
 	# Returns the rank of a particular score on a score table
 	
 	return make_request(url_format(BASE_LINK + "v1_2" + "/scores/get-rank/", {
-		'game_id'    : gameID,
+		'game_id'    : GAME_ID,
 		'username'   : username,
 		'user_token' : user_token,
 		'table_id'   : table_id
@@ -117,7 +105,7 @@ func _fetch_score(use_players_credentials: bool, limit: int, table_id: int, gues
 	# Return a especific score of your game
 	
 	var parameters = {
-		'game_id'     : gameID,
+		'game_id'     : GAME_ID,
 		'limit'       : limit,
 		'table_id'    : table_id,
 		'better_than' : better_than,
@@ -136,7 +124,7 @@ func _score_tables() -> int:
 	# Return the score tables of your game
 	
 	return make_request(url_format(BASE_LINK + 'v1.0' + '/scores/tables/', {
-		'game_id' : gameID
+		'game_id' : GAME_ID
 	}), 'score_tables')
 
 func _fetch_achieved(trophy_id: int, achieved: bool) -> int:
@@ -154,7 +142,7 @@ func _fetch_achieved(trophy_id: int, achieved: bool) -> int:
 	return make_request(url_format(BASE_LINK + "v1" + "/trophies/", {
 		"trophy_id":	trophy_id,
 		"achived":		achieved,
-		"game_id":		gameID,
+		"game_id":		GAME_ID,
 		"username":		username,
 		"user_token":	user_token
 	}), "fetch_achived")
@@ -164,7 +152,7 @@ func _add_achieved(trophy_id: int) -> int:
 	
 	return make_request(url_format(
 		BASE_LINK + "v1_2" + "/trophies/add-achieved/", { 
-			"game_id"     : gameID,
+			"game_id"     : GAME_ID,
 			"username"    : username,
 			"user_token"  : user_token,
 			"trophy_id"   : trophy_id
@@ -173,7 +161,7 @@ func _add_achieved(trophy_id: int) -> int:
 func _remove_achieved(trophy_id: int) -> int:
 	#Remove a trophy of the player
 	return make_request(url_format( BASE_LINK + "v1_2" + "/trophies/remove-achieved/", {
-			"game_id"    : gameID,
+			"game_id"    : GAME_ID,
 			"username"   : username,
 			"user_token" : user_token,
 			"trophy_id"  : trophy_id
@@ -182,102 +170,66 @@ func _remove_achieved(trophy_id: int) -> int:
 
 func _fetch_user_data(user_ids: String) -> int:
 	# Fetch user data
-	var parameters = {"game_id" : gameID, "user_id": user_ids}
+	var parameters = {"game_id" : GAME_ID, "user_id": user_ids}
 	if user_ids == null: parameters["username"] = username
 
 	return make_request(url_format(BASE_LINK + "v1_2" + "/users/", parameters), "fetch_user_data")
 
 
-#----------------- Functionality functions -----------------#
-######################## Do not use! ########################
+#----------------- Non-API functions -----------------#
+##################### Do not use! #####################
 
-func add_request_to_list (url: String, type: String, id: int = -1) -> int:
-	#Add a request to the queue or parallel list
-	if id == -1:
-		id = requests.counter
-		requests.counter += 1
+func _ready():
+	# Activating auto ping
+	add_child(session_timer)
+	session_timer.connect("timeout", self, "on_session_timer_timeout")
 	
-	if parrallel_limit <= 0 or requests.nodes.size() < parrallel_limit:
-		#Create a new instace of HTTPRequest for parallelization
-		var node = HTTPRequest.new()
-		node.use_threads = multithread
-		add_child(node)
-		node.request(url)
-		node.connect("request_completed", self, "on_request_completed", [id])
-		print_verbose("New request (ID: " + String(id) + ")!")
-		
-		requests.nodes[id] = ({
-			"url": url,
-			"type": type,
-			"node": node,
-		})
+	connect("api_ping_session_completed", self, "on_api_ping_session_completed")
+	connect("api_open_session_completed", self, "on_api_open_session_completed")
+	connect("api_auth_user_completed", self, "on_api_auth_user_completed")
+	connect("api_close_session_completed", self, "on_api_close_session_completed")
+	
+	# Get user credentials
+	var credentials := get_gj_credentials()
+	if credentials.size() > 0: 
+		client_version = credentials.get("version")
+		_auth_user(credentials.get("username"), credentials.get("user_token"))
+
+func on_api_close_session_completed (data, id, response_code, result):
+	session = STATUS.CLOSED
+	session_timer.stop()
+	
+
+func on_api_auth_user_completed(data, id, response_code, result):
+	if response_code == 200:
+		session = STATUS.CLOSED
+	elif data.success == 'false':
+		session = STATUS.NOT_AUTENTICATED
+
+
+func on_api_open_session_completed(data, id, response_code, result):
+	if result != RESULT_SUCCESS:
+		session = STATUS.RECONNECTING
+	elif data.success == 'false' or response_code != 200:
+		session = STATUS.NOT_AUTENTICATED
 	else:
-		#If the limit was reached, add to queue
-		requests.queue.push_back({
-			"id": id,
-			"url": url,
-			"type": type,
-		})
-		print_verbose("Added request to queue")
-		
-	return id
-
-func on_request_completed(result, response_code, headers, body, id):
-	print_verbose("Request (ID = " + String(id) + ") completed with code: " + String(response_code) +
-	"(Result = " + String(result) + ")")
-
-	var request_node = requests.nodes.get(id)
-	requests.nodes.erase(id)
-	request_node.node.disconnect("request_completed", self, "on_request_completed")
-	
-	emit_signal("api_request_completed", id, request_node.type, response_code, body)
-	emit_signal("api_" + request_node.type + "_completed", id, response_code, body)
-	request_node.node.queue_free()
-	
-	if requests.queue.size() > 0: 
-		var next = requests.queue.pop_front()
-		add_request_to_list(next.url, next.type, next.id)
-
-func make_request(url: String, type: String) -> int:
-	#Add the request to the queue and return request id
-	
-	var formated_URL = url
-	if formated_URL.find("format") == -1:
-		formated_URL = url_format(url, {"format": "json"})
-	
-	formated_URL = sign_url(formated_URL)
-	print_verbose("Final URL: " + formated_URL)
-	
-	return add_request_to_list(formated_URL, type)
+		session_timer.start(3)
+		session = STATUS.OPEN
 
 
-func url_format (base: String, args: Dictionary = {}) -> String:
-	#Get an url and arguments and return a formated url
-	
-	var link = base
-	
-	if (!base.ends_with("?")):
-		if (base.find("?") == -1):
-			link += "?"
-		else:
-			link += "&"
-			
-	
-	for key in args:
-		if (args[key]):
-			link += String(key).http_escape() + "=" + String(args[key]).http_escape() + "&"
-	
-	link = link.rstrip("&")
-	
-	return link
+func on_api_ping_session_completed(data, id, response_code, result):
+	if result != RESULT_SUCCESS:
+		session = STATUS.RECONNECTING
+	elif data.success == 'false' or response_code != 200:
+		print_verbose("Failed to ping: " + data.message)
 
 
-func sign_url(url: String) -> String:
-	var signature = url + privateKey
-	signature = signature.sha1_text()
-	
-	return url_format(url, {"signature": signature})
-	
-	
-func print_verbose(msg):
-	if verbose: print("[GameJoltAPI] " + msg)
+func on_session_timer_timeout():
+	match session:
+		STATUS.RECONNECTING:
+			print_verbose("Reconnectiong...")
+			_open_session()
+		STATUS.OPEN:
+			_ping_session()
+		STATUS.CLOSED, STATUS.NOT_AUTENTICATED:
+			session_timer.stop()
