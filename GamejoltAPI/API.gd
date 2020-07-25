@@ -1,5 +1,21 @@
 extends "GameJoltAPIBaseClass.gd"
 
+var URLs = {
+	"auth_user"       : "/users/auth/",
+	"open_session"    : "/sessions/open/",
+	"ping_session"    : "/sessions/ping/",
+	"check_session"   : "/sessions/check/",
+	"close_session"   : "/sessions/close/",
+	"add_score"       : "/scores/add/",
+	"score_get_rank"  : "/scores/get-rank/",
+	"fetch_score"     : "/scores/",
+	"score_tables"    : "/scores/tables/",
+	"fetch_achieved"  : "/trophies/",
+	"add_achieved"    : "/trophies/add-achieved/",
+	"remove_achieved" : "/trophies/remove-achieved/",
+	"fetch_user_data" : "/users/",
+	"batch_request"   : "/batch/",
+}
 
 # GameJolt server require to ping every 120s to make sure you still online
 var session_timer := Timer.new()
@@ -9,6 +25,7 @@ signal api_request_completed(type, data, id, response_code, result)
 
 signal api_auth_user_completed(data, id, response_code, result)
 signal api_open_session_completed(data, id, response_code, result)
+signal api_login_user_completed(data, id, response_code, result)
 signal api_ping_session_completed(data, id, response_code, result)
 signal api_check_session_completed(data, id, response_code, result)
 signal api_close_session_completed(data, id, response_code, result)
@@ -16,11 +33,11 @@ signal api_add_score_completed(data, id, response_code, result)
 signal api_score_get_rank_completed(data, id, response_code, result)
 signal api_fetch_score_completed(data, id, response_code, result)
 signal api_score_tables_completed(data, id, response_code, result)
-
 signal api_fetch_achieved_completed(data, id, response_code, result)
 signal api_add_achieved_completed(data, id, response_code, result)
 signal api_remove_achieved_completed(data, id, response_code, result)
 signal api_fetch_user_data_completed(data, id, response_code, result)
+signal api_batch_request_completed(data, id, response_code, result)
 
 #----------------- API functions -----------------#
 
@@ -29,7 +46,7 @@ func _auth_user(username: String, user_token: String) -> int:
 	self.username   = username
 	self.user_token = user_token
 	
-	return make_request(url_format(BASE_LINK + "v1" + "/users/auth/", {
+	return make_request(url_format(BASE_LINK + "v1" + URLs.auth_user, {
 		"game_id":      GAME_ID,
 		"username":		username,
 		"user_token":	user_token
@@ -37,7 +54,7 @@ func _auth_user(username: String, user_token: String) -> int:
 
 func _open_session() -> int:
 	# Open the player session
-	var id = make_request(url_format(BASE_LINK + "v1" + "/sessions/open/", {
+	var id = make_request(url_format(BASE_LINK + "v1" + URLs.open_session, {
 		'game_id'    : GAME_ID,
 		'username'   : username,
 		'user_token' : user_token
@@ -45,10 +62,25 @@ func _open_session() -> int:
 
 	return id
 
+func _login_user(username: String, user_token: String) -> int:
+	# Athenticate the user and opens a new session if succeded
+	var req = []
+	req.append(url_format(URLs.auth_user, {
+		"game_id":      GAME_ID,
+		"username":		username,
+		"user_token":	user_token
+	}))
+	req.append(url_format(URLs.open_session, {
+		'game_id'    : GAME_ID,
+		'username'   : username,
+		'user_token' : user_token
+	}))
+	return _batch_request(PoolStringArray(req), true, false)
+
 func _ping_session(status:= "") -> int:
 	# Ping the session
 	# Valid values for status: "active" and "idle"
-	return make_request(url_format(BASE_LINK + "v1" + "/sessions/ping/", {
+	return make_request(url_format(BASE_LINK + "v1" + URLs.ping_session, {
 		"game_id"    : GAME_ID,
 		"username"   : username,
 		"user_token" : user_token,
@@ -57,14 +89,14 @@ func _ping_session(status:= "") -> int:
 
 func _check_session() -> int:
 	# Check what game the player is current playing
-	return make_request(url_format(BASE_LINK + "v1_2" + "/sessions/check/", {
+	return make_request(url_format(BASE_LINK + "v1_2" + URLs.check_session, {
 		"game_id"    : GAME_ID,
 		"username"   : username,
 	}), "check_session")
 
 func _close_session() -> int:
 	# Close the current session for the game
-	return make_request(url_format(BASE_LINK + "v1_2" + "/sessions/close/", {
+	return make_request(url_format(BASE_LINK + "v1_2" + URLs.close_session, {
 		"game_id"    : GAME_ID,
 		"username"   : username,
 	}), "close_session")
@@ -89,12 +121,12 @@ func _add_score(use_players_credentials: bool, guest: String, score: String, sor
 	else: 
 		parameters["guest"]      = guest
 
-	return make_request(url_format(BASE_LINK + "v1" + "/scores/add/", parameters), "add_score")
+	return make_request(url_format(BASE_LINK + "v1" + URLs.add_score, parameters), "add_score")
 
 func _score_get_rank(table_id: int) -> int:
 	# Returns the rank of a particular score on a score table
 	
-	return make_request(url_format(BASE_LINK + "v1_2" + "/scores/get-rank/", {
+	return make_request(url_format(BASE_LINK + "v1_2" + URLs.score_get_rank, {
 		'game_id'    : GAME_ID,
 		'username'   : username,
 		'user_token' : user_token,
@@ -118,12 +150,12 @@ func _fetch_score(use_players_credentials: bool, limit: int, table_id: int, gues
 	else:
 		parameters['guest']      = guest
 	
-	return make_request(url_format(BASE_LINK + 'v1_2' + '/scores/', parameters), 'fetch_score')
+	return make_request(url_format(BASE_LINK + 'v1_2' + URLs.fetch_scores, parameters), 'fetch_score')
 
 func _score_tables() -> int:
 	# Return the score tables of your game
 	
-	return make_request(url_format(BASE_LINK + 'v1.0' + '/scores/tables/', {
+	return make_request(url_format(BASE_LINK + 'v1.0' + URLs.score_tables, {
 		'game_id' : GAME_ID
 	}), 'score_tables')
 
@@ -139,7 +171,7 @@ func _fetch_achieved(trophy_id: int, achieved: bool) -> int:
 	#			- Return achived if true
 	#			- Return not achived if false
 	
-	return make_request(url_format(BASE_LINK + "v1" + "/trophies/", {
+	return make_request(url_format(BASE_LINK + "v1" + URLs.fetch_achieved, {
 		"trophy_id":	trophy_id,
 		"achived":		achieved,
 		"game_id":		GAME_ID,
@@ -151,7 +183,7 @@ func _add_achieved(trophy_id: int) -> int:
 	#Add a trophy to the player
 	
 	return make_request(url_format(
-		BASE_LINK + "v1_2" + "/trophies/add-achieved/", { 
+		BASE_LINK + "v1_2" + URLs.add_achieved, { 
 			"game_id"     : GAME_ID,
 			"username"    : username,
 			"user_token"  : user_token,
@@ -160,7 +192,7 @@ func _add_achieved(trophy_id: int) -> int:
 	
 func _remove_achieved(trophy_id: int) -> int:
 	#Remove a trophy of the player
-	return make_request(url_format( BASE_LINK + "v1_2" + "/trophies/remove-achieved/", {
+	return make_request(url_format( BASE_LINK + "v1_2" + URLs.remove_achieved, {
 			"game_id"    : GAME_ID,
 			"username"   : username,
 			"user_token" : user_token,
@@ -172,9 +204,25 @@ func _fetch_user_data(user_ids: String) -> int:
 	# Fetch user data
 	var parameters = {"game_id" : GAME_ID, "user_id": user_ids}
 	if user_ids == null: parameters["username"] = username
+	
+	return make_request(url_format(BASE_LINK + "v1_2" + URLs.fetch_user_data, parameters), "fetch_user_data")
 
-	return make_request(url_format(BASE_LINK + "v1_2" + "/users/", parameters), "fetch_user_data")
-
+func _batch_request(requests:=PoolStringArray(), break_on_error:=true, parallel:=false) -> int:
+	#Make a batch request
+	#Can handle multiple sub-requests in one major request
+	#You can create a sub-request by using url_format function
+	
+	var final_url = BASE_LINK + "v1_2" + URLs.batch_request
+	for req in requests:
+		#Concat each sub-request to the final url
+		final_url = url_format(final_url, {
+				"requests[]": sign_url(req).http_escape()
+			})
+	
+	return make_request(url_format(final_url, {
+		"break_on_error": break_on_error,
+		"parallel": parallel
+	}), "batch_request")
 
 #----------------- Non-API functions -----------------#
 ##################### Do not use! #####################

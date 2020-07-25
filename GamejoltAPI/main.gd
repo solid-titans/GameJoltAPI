@@ -5,11 +5,12 @@ func _enter_tree():
 	add_autoload_singleton("GameJoltAPI", "res://addons/GamejoltAPI/API.gd")
 
 	#Adding all project settings
-	add_custom_project_setting("GameJoltAPI/Game/GameID",                    "",    TYPE_STRING)
-	add_custom_project_setting("GameJoltAPI/Game/PrivateKey",                "",    TYPE_STRING)
-	add_custom_project_setting("GameJoltAPI/Requests/ParallelRequestsLimit", 50,    TYPE_INT)
-	add_custom_project_setting("GameJoltAPI/Requests/Multithread",           false, TYPE_BOOL)
-	add_custom_project_setting("GameJoltAPI/Debug/Verbose",                  false, TYPE_BOOL)
+	add_custom_project_setting("GameJoltAPI/Game/GameID",                    "",              TYPE_STRING)
+	add_custom_project_setting("GameJoltAPI/Game/PrivateKey",                "",              TYPE_STRING)
+	add_custom_project_setting("GameJoltAPI/Requests/ParallelRequestsLimit", 50,              TYPE_INT)
+	add_custom_project_setting("GameJoltAPI/Requests/Multithread",           false,           TYPE_BOOL)
+	add_custom_project_setting("GameJoltAPI/Debug/Verbose",                  false,           TYPE_BOOL)
+	
 	
 	#Saving settings
 	var error := ProjectSettings.save()
