@@ -11,30 +11,24 @@ var user_token : String
 #If the clinet is using the GameJolt client, it will change
 var client_version : String = "none"
 
+#Called when session changes
+signal api_session_status_changed(status)
+
 const BASE_LINK = "https://api.gamejolt.com/api/game/"
 
 #Change this on Project Settings
 var GAME_ID        : String  = ProjectSettings.get_setting("GameJoltAPI/Game/GameID")
 var PRIVATE_KEY    : String  = ProjectSettings.get_setting("GameJoltAPI/Game/PrivateKey")
-var PARALLEL_LIMIT : int     = ProjectSettings.get_setting("GameJoltAPI/Requests/ParallelRequestsLimit")
 var MULTITHREAD    : bool    = ProjectSettings.get_setting("GameJoltAPI/Requests/Multithread")
 var VERBOSE        : bool    = ProjectSettings.get_setting("GameJoltAPI/Debug/Verbose")
-
-
-enum STATUS {
-	NOT_AUTENTICATED,
-	RECONNECTING,
-	OPEN,
-	CLOSED,
-}
-
-var session = STATUS.NOT_AUTENTICATED
+var DOWNLOAD_PATH  : String  = ProjectSettings.get_setting("GameJoltAPI/Requests/DownloadPath")
 
 var requests := {
 	"counter" : 0,  #The number of requests done (used to define the ID's)
 	"nodes"   : {}, #The request Nodes
-	"queue"   : [], #Requests that are waiting to others to finish
 }
+
+signal api_download_file_completed(response, id, result, metadata)
 
 func get_gj_credentials() -> Dictionary:
 	#Get Credentials from GameJolt credentials file
@@ -57,35 +51,24 @@ func get_gj_credentials() -> Dictionary:
 	return credentials
 
 
-func add_request_to_list (url: String, type: String, id: int = -1) -> int:
+func add_request_node_to_list (node: HTTPRequest, type: String, metadata:= {},  id: int = -1) -> int:
 	#Add a request to the queue or parallel list
 	if id == -1:
 		id = requests.counter
 		requests.counter += 1
 	
-	if PARALLEL_LIMIT <= 0 or requests.nodes.size() < PARALLEL_LIMIT:
-		#Create a new instace of HTTPRequest for parallelization
-		var node = HTTPRequest.new()
-		node.use_threads = MULTITHREAD
-		add_child(node)
-		node.request(url)
-		node.connect("request_completed", self, "on_request_completed", [id])
-		print_verbose("New request (ID: " + String(id) + ")!")
-		
-		requests.nodes[id] = ({
-			"url": url,
-			"type": type,
-			"node": node,
-		})
-	else:
-		#If the limit was reached, add to queue
-		requests.queue.push_back({
-			"id": id,
-			"url": url,
-			"type": type,
-		})
-		print_verbose("Added request to queue")
-		
+	
+	#Parallelization
+	add_child(node)
+	node.connect("request_completed", self, "on_request_completed", [id])
+	print_verbose("New request (ID: " + String(id) + ")!")
+	
+	requests.nodes[id] = ({
+		"type"     : type,
+		"node"     : node,
+		"metadata" : metadata
+	})
+	
 	return id
 
 
@@ -104,21 +87,21 @@ func on_request_completed(result, response_code, headers, body, id):
 	if not parsed_body: parsed_body = {'success': 'false'}
 	else: parsed_body = JSON.parse(parsed_body).result.response
 	
-	print_verbose(parsed_body)
+	var response = {
+		"response_code": response_code,
+		"headers": headers,
+		"body": body,
+	}
 	
 	# Emit a general signal and then a specific one
-	emit_signal("api_request_completed", request_node.type, parsed_body, id, response_code, result)
-	emit_signal("api_" + request_node.type + "_completed", parsed_body, id, response_code, result)
+	emit_signal("api_request_completed", request_node.type, response, id, result, request_node.metadata)
+	emit_signal("api_" + request_node.type + "_completed", response, id, result, request_node.metadata)
 	#Remove the node
 	request_node.node.queue_free()
 	
-	# Add the next request if there is another one on queue
-	if requests.queue.size() > 0: 
-		var next = requests.queue.pop_front()
-		add_request_to_list(next.url, next.type, next.id)
 
 
-func make_request(url: String, type: String) -> int:
+func make_request(url: String, type: String, path:=DOWNLOAD_PATH + String(requests.counter).md5_text(), metadata:= {}) -> int:
 	#Add the request to the queue and return request id
 	
 	var formated_URL = url
@@ -128,8 +111,18 @@ func make_request(url: String, type: String) -> int:
 	formated_URL = sign_url(formated_URL)
 	print_verbose("Final URL: " + formated_URL)
 	
-	return add_request_to_list(formated_URL, type)
+	var node = HTTPRequest.new()
+	node.request(formated_URL)
+	node.use_threads = MULTITHREAD
+	node.download_file = path
+	
+	metadata["path"] = path
+	metadata["url"]  = url
+	
+	return add_request_node_to_list(node, type, metadata)
 
+func download_from_link(url: String, type:="download_file", path:=DOWNLOAD_PATH + String(requests.counter).md5_text(), metadata:= {}) -> int:
+		return make_request(url, type, path, metadata)
 
 func url_format (base: String, args: Dictionary = {}) -> String:
 	#Get an url and arguments and return a formated url
@@ -157,7 +150,6 @@ func sign_url(url: String) -> String:
 	signature = signature.sha1_text()
 	
 	return url_format(url, {"signature": signature})
-	
 	
 func print_verbose(msg):
 	if VERBOSE: print("[GameJoltAPI] ", msg)

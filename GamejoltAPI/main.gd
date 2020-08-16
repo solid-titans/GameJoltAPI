@@ -1,15 +1,16 @@
 tool
 extends EditorPlugin
 
+
 func _enter_tree():
 	add_autoload_singleton("GameJoltAPI", "res://addons/GamejoltAPI/API.gd")
 
 	#Adding all project settings
-	add_custom_project_setting("GameJoltAPI/Game/GameID",                    "",              TYPE_STRING)
-	add_custom_project_setting("GameJoltAPI/Game/PrivateKey",                "",              TYPE_STRING)
-	add_custom_project_setting("GameJoltAPI/Requests/ParallelRequestsLimit", 50,              TYPE_INT)
-	add_custom_project_setting("GameJoltAPI/Requests/Multithread",           false,           TYPE_BOOL)
-	add_custom_project_setting("GameJoltAPI/Debug/Verbose",                  false,           TYPE_BOOL)
+	add_custom_project_setting("GameJoltAPI/Game/GameID",                    "",                             TYPE_STRING)
+	add_custom_project_setting("GameJoltAPI/Game/PrivateKey",                "",                             TYPE_STRING)
+	add_custom_project_setting("GameJoltAPI/Requests/Multithread",           false,                          TYPE_BOOL)
+	add_custom_project_setting("GameJoltAPI/Requests/DownloadPath",           "user://GameJoltAPI/Downloads", TYPE_STRING)
+	add_custom_project_setting("GameJoltAPI/Debug/Verbose",                  false,                          TYPE_BOOL)
 	
 	
 	#Saving settings
@@ -38,8 +39,8 @@ func _exit_tree():
 	#Clear all Project Settings
 	ProjectSettings.clear("GameJoltAPI/Game/GameID")
 	ProjectSettings.clear("GameJoltAPI/Game/PrivateKey")
-	ProjectSettings.clear("GameJoltAPI/Requests/ParallelRequestsLimit")
 	ProjectSettings.clear("GameJoltAPI/Requests/Multithread")
+	ProjectSettings.clear("GameJoltAPI/Requests/DownloadPath")
 	ProjectSettings.clear("GameJoltAPI/Debug/Verbose")
 
 	remove_autoload_singleton("GameJoltAPI")

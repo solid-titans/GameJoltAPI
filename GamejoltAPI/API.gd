@@ -20,24 +20,30 @@ var URLs = {
 # GameJolt server require to ping every 120s to make sure you still online
 var session_timer := Timer.new()
 
-# This signal is called every request is completed, try to use the other ones instead.
-signal api_request_completed(type, data, id, response_code, result) 
+enum STATUS {
+	NOT_AUTENTICATED,
+	RECONNECTING,
+	OPEN,
+	CLOSED,
+}
 
-signal api_auth_user_completed(data, id, response_code, result)
-signal api_open_session_completed(data, id, response_code, result)
-signal api_login_user_completed(data, id, response_code, result)
-signal api_ping_session_completed(data, id, response_code, result)
-signal api_check_session_completed(data, id, response_code, result)
-signal api_close_session_completed(data, id, response_code, result)
-signal api_add_score_completed(data, id, response_code, result)
-signal api_score_get_rank_completed(data, id, response_code, result)
-signal api_fetch_score_completed(data, id, response_code, result)
-signal api_score_tables_completed(data, id, response_code, result)
-signal api_fetch_achieved_completed(data, id, response_code, result)
-signal api_add_achieved_completed(data, id, response_code, result)
-signal api_remove_achieved_completed(data, id, response_code, result)
-signal api_fetch_user_data_completed(data, id, response_code, result)
-signal api_batch_request_completed(data, id, response_code, result)
+var session = STATUS.NOT_AUTENTICATED setget change_session_status
+
+signal api_auth_user_completed(response, id, result, metadata)
+signal api_open_session_completed(response, id, result, metadata)
+signal api_login_user_completed(response, id, result, metadata)
+signal api_ping_session_completed(response, id, result, metadata)
+signal api_check_session_completed(response, id, result, metadata)
+signal api_close_session_completed(response, id, result, metadata)
+signal api_add_score_completed(response, id, result, metadata)
+signal api_score_get_rank_completed(response, id, result, metadata)
+signal api_fetch_score_completed(response, id, result, metadata)
+signal api_score_tables_completed(response, id, result, metadata)
+signal api_fetch_achieved_completed(response, id, result, metadata)
+signal api_add_achieved_completed(response, id, result, metadata)
+signal api_remove_achieved_completed(response, id, result, metadata)
+signal api_fetch_user_data_completed(response, id, result, metadata)
+signal api_batch_request_completed(response, id, result, metadata)
 
 #----------------- API functions -----------------#
 
@@ -159,7 +165,7 @@ func _score_tables() -> int:
 		'game_id' : GAME_ID
 	}), 'score_tables')
 
-func _fetch_achieved(trophy_id: int, achieved: bool) -> int:
+func _fetch_achieved(trophy_id, achieved) -> int:
 	#	Fetch whatever if a trophy is achived or not
 	#	@params:
 	#		*tropy_id: 
@@ -207,7 +213,7 @@ func _fetch_user_data(user_ids: String) -> int:
 	
 	return make_request(url_format(BASE_LINK + "v1_2" + URLs.fetch_user_data, parameters), "fetch_user_data")
 
-func _batch_request(requests:=PoolStringArray(), break_on_error:=true, parallel:=false) -> int:
+func _batch_request(requests:=PoolStringArray(), break_on_error:=true, parallel:=false, download_to_file:=DOWNLOAD_PATH+String(requests.counter).md5_text()) -> int:
 	#Make a batch request
 	#Can handle multiple sub-requests in one major request
 	#You can create a sub-request by using url_format function
@@ -222,7 +228,7 @@ func _batch_request(requests:=PoolStringArray(), break_on_error:=true, parallel:
 	return make_request(url_format(final_url, {
 		"break_on_error": break_on_error,
 		"parallel": parallel
-	}), "batch_request")
+	}), "batch_request", download_to_file)
 
 #----------------- Non-API functions -----------------#
 ##################### Do not use! #####################
@@ -242,6 +248,14 @@ func _ready():
 	if credentials.size() > 0: 
 		client_version = credentials.get("version")
 		_auth_user(credentials.get("username"), credentials.get("user_token"))
+
+func change_session_status (new_status: int):
+	if not STATUS.has(new_status):
+		print_verbose("Error while setting new session status (Unknow status)")
+	
+	print_verbose("Status changed of " + String(session) + " to " + String(new_status))
+	session = new_status
+	emit_signal("api_session_status_changed", new_status)
 
 func on_api_close_session_completed (data, id, response_code, result):
 	session = STATUS.CLOSED
