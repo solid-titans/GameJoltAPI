@@ -137,8 +137,8 @@ func url_format (base: String, args: Dictionary = {}) -> String:
 			
 	
 	for key in args:
-		if (args[key]):
-			link += String(key).http_escape() + "=" + String(args[key]).http_escape() + "&"
+		if (args.get(key)):
+			link += String(key).http_escape() + "=" + String(args.get(key)).http_escape() + "&"
 	
 	link = link.rstrip("&")
 	
