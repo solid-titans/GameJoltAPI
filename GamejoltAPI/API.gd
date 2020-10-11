@@ -261,7 +261,7 @@ func _ready():
 	# Activating auto ping
 	add_child(session_timer)
 	session_timer.connect("timeout", self, "on_session_timer_timeout")
-	
+    
 	connect("api_ping_session_completed", self, "on_api_ping_session_completed")
 	connect("api_open_session_completed", self, "on_api_open_session_completed")
 	connect("api_auth_user_completed", self, "on_api_auth_user_completed")
