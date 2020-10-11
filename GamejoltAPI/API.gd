@@ -52,118 +52,130 @@ func _auth_user(username: String, user_token: String) -> int:
 	self.username   = username
 	self.user_token = user_token
 	
-	return make_request(url_format(BASE_LINK + "v1" + URLs.auth_user, {
-		"game_id":      GAME_ID,
-		"username":		username,
-		"user_token":	user_token
-	}), "auth_user")
+    return make_request(url_format(BASE_LINK + "v1" + URLs.auth_user, 
+        {
+            "game_id":      GAME_ID,
+            "username":		username,
+            "user_token":	user_token
+        }
+    ), "auth_user")
 
 func _open_session() -> int:
 	# Open the player session
-	var id = make_request(url_format(BASE_LINK + "v1" + URLs.open_session, {
-		'game_id'    : GAME_ID,
-		'username'   : username,
-		'user_token' : user_token
-	}), "open_session")
+    var id = make_request(url_format(BASE_LINK + "v1" + URLs.open_session, 
+        {
+            'game_id'    : GAME_ID,
+            'username'   : username,
+            'user_token' : user_token
+        }
+    ), "open_session")
 
 	return id
 
 func _login_user(username: String, user_token: String) -> int:
 	# Athenticate the user and opens a new session if succeded
 	var req = []
-	req.append(url_format(URLs.auth_user, {
-		"game_id":      GAME_ID,
-		"username":		username,
-		"user_token":	user_token
-	}))
-	req.append(url_format(URLs.open_session, {
-		'game_id'    : GAME_ID,
-		'username'   : username,
-		'user_token' : user_token
-	}))
+    req.append(url_format(URLs.auth_user, 
+        {
+            "game_id":      GAME_ID,
+            "username":		username,
+            "user_token":	user_token
+        }
+    ))
+    req.append(url_format(URLs.open_session, 
+        {
+            'game_id'    : GAME_ID,
+            'username'   : username,
+            'user_token' : user_token
+        }
+    ))
 	return _batch_request(PoolStringArray(req), true, false)
 
 func _ping_session(status:= "") -> int:
 	# Ping the session
 	# Valid values for status: "active" and "idle"
-	return make_request(url_format(BASE_LINK + "v1" + URLs.ping_session, {
-		"game_id"    : GAME_ID,
-		"username"   : username,
-		"user_token" : user_token,
-		"status"     : status
-	}), "ping_session")
+    return make_request(url_format(BASE_LINK + "v1" + URLs.ping_session, 
+        {
+            "game_id"    : GAME_ID,
+            "username"   : username,
+            "user_token" : user_token,
+            "status"     : status
+        }
+    ), "ping_session")
 
 func _check_session() -> int:
 	# Check what game the player is current playing
-	return make_request(url_format(BASE_LINK + "v1_2" + URLs.check_session, {
-		"game_id"    : GAME_ID,
-		"username"   : username,
-	}), "check_session")
+    return make_request(url_format(BASE_LINK + "v1_2" + URLs.check_session, 
+        {
+            "game_id"    : GAME_ID,
+            "username"   : username,
+        }
+    ), "check_session")
 
 func _close_session() -> int:
 	# Close the current session for the game
-	return make_request(url_format(BASE_LINK + "v1_2" + URLs.close_session, {
-		"game_id"    : GAME_ID,
-		"username"   : username,
-	}), "close_session")
+    return make_request(url_format(BASE_LINK + "v1_2" + URLs.close_session, 
+        {
+            "game_id"    : GAME_ID,
+            "username"   : username,
+        }
+    ), "close_session")
 
 func _add_score(use_players_credentials: bool, guest: String, score: String, sort: int, extra_data: String, table_id: int) -> int:
 	# Add a score to the scoreboard
 	# Required : 'Score' and 'Sort'!
 	# Optional : The players credentials, some extra data you want to store and the table id to store
 	# If you choose to not use the players credentials you can choose a name for the player
-
-	var parameters = {
-		"game_id"    : GAME_ID,
-		"score"      : score,
-		"sort"       : sort,
-		"extra_data" : extra_data,
-		"table_id"   : table_id 
-	}
 	
-	if use_players_credentials: 
-		parameters["username"]   = username
-		parameters["user_token"] = user_token
-	else: 
-		parameters["guest"]      = guest
-
-	return make_request(url_format(BASE_LINK + "v1" + URLs.add_score, parameters), "add_score")
+    return make_request(url_format(BASE_LINK + "v1" + URLs.add_score, 
+        {
+		    "game_id"    : GAME_ID,
+		    "score"      : score,
+		    "sort"       : sort,
+		    "extra_data" : extra_data,
+		    "table_id"   : table_id,
+		    "username"   : username   if use_players_credentials     else null,
+		    "user_token" : user_token if use_players_credentials     else null, 
+		    "guest"      : guest      if not use_players_credentials else null,
+        }
+    ), "add_score")
 
 func _score_get_rank(table_id: int) -> int:
 	# Returns the rank of a particular score on a score table
 	
-	return make_request(url_format(BASE_LINK + "v1_2" + URLs.score_get_rank, {
-		'game_id'    : GAME_ID,
-		'username'   : username,
-		'user_token' : user_token,
-		'table_id'   : table_id
-	}), "score_get_rank")
+    return make_request(url_format(BASE_LINK + "v1_2" + URLs.score_get_rank, 
+        {
+		    'game_id'    : GAME_ID,
+		    'username'   : username,
+		    'user_token' : user_token,
+		    'table_id'   : table_id
+        }
+    ), "score_get_rank")
 
 func _fetch_score(use_players_credentials: bool, limit: int, table_id: int, guest: String, better_than: int, worse_than: int) -> int:
 	# Return a especific score of your game
 	
-	var parameters = {
-		'game_id'     : GAME_ID,
-		'limit'       : limit,
-		'table_id'    : table_id,
-		'better_than' : better_than,
-		'worse_than'  : worse_than
-	}
-	
-	if use_players_credentials:
-		parameters['username']   = username
-		parameters['user_token'] = user_token
-	else:
-		parameters['guest']      = guest
-	
-	return make_request(url_format(BASE_LINK + 'v1_2' + URLs.fetch_scores, parameters), 'fetch_score')
+    return make_request(url_format(BASE_LINK + 'v1_2' + URLs.fetch_scores, 
+        {
+		    'game_id'     : GAME_ID,
+		    'limit'       : limit,
+		    'table_id'    : table_id,
+		    'better_than' : better_than,
+            'worse_than'  : worse_than,
+            "username"   : username   if use_players_credentials     else null,
+		    "user_token" : user_token if use_players_credentials     else null, 
+		    "guest"      : guest      if not use_players_credentials else null,
+        }
+    ), 'fetch_score')
 
 func _score_tables() -> int:
 	# Return the score tables of your game
 	
-	return make_request(url_format(BASE_LINK + 'v1.0' + URLs.score_tables, {
-		'game_id' : GAME_ID
-	}), 'score_tables')
+    return make_request(url_format(BASE_LINK + 'v1.0' + URLs.score_tables, 
+        {
+		    'game_id' : GAME_ID
+        }
+    ), 'score_tables')
 
 func _fetch_achieved(trophy_id, achieved) -> int:
 	#	Fetch whatever if a trophy is achived or not
@@ -177,41 +189,51 @@ func _fetch_achieved(trophy_id, achieved) -> int:
 	#			- Return achived if true
 	#			- Return not achived if false
 	
-	return make_request(url_format(BASE_LINK + "v1" + URLs.fetch_achieved, {
-		"trophy_id":	trophy_id,
-		"achived":		achieved,
-		"game_id":		GAME_ID,
-		"username":		username,
-		"user_token":	user_token
-	}), "fetch_achived")
+    return make_request(url_format(BASE_LINK + "v1" + URLs.fetch_achieved, 
+        {
+		    "trophy_id":	trophy_id,
+		    "achived":		achieved,
+		    "game_id":		GAME_ID,
+		    "username":		username,
+		    "user_token":	user_token
+        }
+    ), "fetch_achived")
 
 func _add_achieved(trophy_id: int) -> int:
 	#Add a trophy to the player
 	
 	return make_request(url_format(
-		BASE_LINK + "v1_2" + URLs.add_achieved, { 
+        BASE_LINK + "v1_2" + URLs.add_achieved, 
+        { 
 			"game_id"     : GAME_ID,
 			"username"    : username,
 			"user_token"  : user_token,
 			"trophy_id"   : trophy_id
-		}), "add_achieved")
+        }
+    ), "add_achieved")
 	
 func _remove_achieved(trophy_id: int) -> int:
 	#Remove a trophy of the player
-	return make_request(url_format( BASE_LINK + "v1_2" + URLs.remove_achieved, {
+    return make_request(url_format( BASE_LINK + "v1_2" + URLs.remove_achieved,
+        {
 			"game_id"    : GAME_ID,
 			"username"   : username,
 			"user_token" : user_token,
 			"trophy_id"  : trophy_id
-		}), "remove_achieved")
+        }
+    ), "remove_achieved")
 	
 
 func _fetch_user_data(user_ids: String) -> int:
 	# Fetch user data
-	var parameters = {"game_id" : GAME_ID, "user_id": user_ids}
-	if user_ids == null: parameters["username"] = username
 	
-	return make_request(url_format(BASE_LINK + "v1_2" + URLs.fetch_user_data, parameters), "fetch_user_data")
+    return make_request(url_format(BASE_LINK + "v1_2" + URLs.fetch_user_data, 
+        {
+            "game_id"  : GAME_ID,
+            "user_id"  : user_ids,
+            "username" : username if user_ids else null,
+        }
+    ), "fetch_user_data")
 
 func _batch_request(requests:=PoolStringArray(), break_on_error:=true, parallel:=false, download_to_file:=DOWNLOAD_PATH+String(requests.counter).md5_text()) -> int:
 	#Make a batch request
@@ -225,10 +247,12 @@ func _batch_request(requests:=PoolStringArray(), break_on_error:=true, parallel:
 				"requests[]": sign_url(req).http_escape()
 			})
 	
-	return make_request(url_format(final_url, {
-		"break_on_error": break_on_error,
-		"parallel": parallel
-	}), "batch_request", download_to_file)
+    return make_request(url_format(final_url, 
+        {
+		    "break_on_error": break_on_error,
+		    "parallel": parallel
+        }
+    ), "batch_request", download_to_file)
 
 #----------------- Non-API functions -----------------#
 ##################### Do not use! #####################
