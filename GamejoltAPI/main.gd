@@ -5,7 +5,6 @@ var _PATH := Directory.new().get_current_dir()
 
 func _enter_tree():
 	
-	
 	add_autoload_singleton("GameJoltAPI", "res://addons/GameJoltAPI/API.gd")
 
 	#Adding all project settings
