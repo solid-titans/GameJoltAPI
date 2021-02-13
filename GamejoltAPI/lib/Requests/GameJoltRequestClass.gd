@@ -9,9 +9,9 @@ enum METHODS {
 }
 
 const _BASE_URL				:= "https://api.gamejolt.com/api/game/"
-var _private_key			: String = ProjectSettings.get_setting("GameJoltAPI/Game/PrivateKey")
 onready var _http_request 	: HTTPRequest
-var _url					: String
+var _private_key			: String = ProjectSettings.get_setting("GameJoltAPI/Game/PrivateKey")
+var _uri					: String
 var _method					: int
 var _headers				: PoolStringArray
 var _data					: Dictionary
@@ -21,13 +21,13 @@ var _id						: int
 func _init(id : int, data := {}, headers := PoolStringArray(), method := HTTPClient.METHOD_GET):
 	self._id = id
 	self._data = data
-	self.headers = headers
+	self._headers = headers
 
 
 func _parse_data(data : Dictionary):
 	var uri = ""
 	for key in data.keys():
-		uri += "{}={}&".format([String(key).http_escape(), String(data[key]).http_escape()])
+		uri += "%s=%s&" % [String(key).http_escape(), String(data[key]).http_escape()]
 	
 	return uri.rstrip("&")
 
@@ -55,13 +55,10 @@ func _sign_url(url):
 	
 	return signed_url
 
+
 func request():
-	var url = _sign_url(_url + "?" + _parse_data(_data))
+	var url = _sign_url(_uri + "?" + _parse_data(_data))
 	if _method == METHODS.GET:
 		_http_request.request(url, _headers, true, _method)
 	else:
 		printerr("POST method not implemented")
-	
-
-
-

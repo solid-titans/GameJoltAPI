@@ -1,8 +1,6 @@
 tool
 extends EditorPlugin
 
-var _PATH := Directory.new().get_current_dir()
-
 func _enter_tree():
 	
 	add_autoload_singleton("GameJoltAPI", "res://addons/GameJoltAPI/API.gd")
@@ -11,7 +9,7 @@ func _enter_tree():
 	add_custom_project_setting("GameJoltAPI/Game/GameID",                    "",                             TYPE_STRING)
 	add_custom_project_setting("GameJoltAPI/Game/PrivateKey",                "",                             TYPE_STRING)
 	add_custom_project_setting("GameJoltAPI/Requests/Multithread",           false,                          TYPE_BOOL)
-	add_custom_project_setting("GameJoltAPI/Requests/DownloadPath",           "user://GameJoltAPI/Downloads", TYPE_STRING)
+	add_custom_project_setting("GameJoltAPI/Requests/DownloadPath",          "user://GameJoltAPI/Downloads", TYPE_STRING)
 	add_custom_project_setting("GameJoltAPI/Debug/Verbose",                  false,                          TYPE_BOOL)
 	
 	
