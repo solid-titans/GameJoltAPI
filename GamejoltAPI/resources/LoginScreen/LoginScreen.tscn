@@ -1,7 +1,9 @@
 [gd_scene load_steps=5 format=2]
 
-[ext_resource path="res://addons/GamejoltAPI/resources/GameJoltResources/logo.svg" type="Texture" id=1]
-[ext_resource path="res://addons/GamejoltAPI/resources/GameJoltResources/LoginButtonFont.ttf" type="DynamicFontData" id=3]
+[ext_resource path="res://addons/GamejoltAPI/resources/GameJoltResources/Logo/logo.svg" type="Texture" id=1]
+[ext_resource path="res://addons/GamejoltAPI/resources/GameJoltResources/Fonts/LoginButtonFont.ttf" type="DynamicFontData" id=3]
+
+
 
 [sub_resource type="DynamicFont" id=2]
 size = 30
