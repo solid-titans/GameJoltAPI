@@ -3,7 +3,7 @@ extends EditorPlugin
 
 func _enter_tree():
 	
-	add_autoload_singleton("GameJoltAPI", "res://addons/GameJoltAPI/API.gd")
+	add_autoload_singleton("GameJoltAPI", "res://addons/GamejoltAPI/lib/GameJoltAPI.gd")
 
 	#Adding all project settings
 	add_custom_project_setting("GameJoltAPI/Game/GameID",                    "",                             TYPE_STRING)

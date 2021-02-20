@@ -1,7 +1,6 @@
 extends Node
-class_name GameJoltRequestClass
 
-signal request_completed(id, result, response_code, headers, parsed_body)
+signal request_completed(result, response_code, headers, parsed_body)
 
 enum METHODS {
 	GET = HTTPClient.METHOD_GET,
@@ -9,22 +8,20 @@ enum METHODS {
 }
 
 
-const _BASE_URL				:= "https://api.gamejolt.com/api/game/"
 onready var _http_request 	: HTTPRequest
-var _private_key			: String = ProjectSettings.get_setting("GameJoltAPI/Game/PrivateKey")
-var _uri					: String
+var _private_key			: String
+var _url					: String
 var _method					: int
 var _headers				: PoolStringArray
 var _data					: Dictionary
-var _id						: int
 
 
-func _init(id : int, uri : String, data := {}, headers := PoolStringArray(),
+func _init(private_key : String, url : String, data := {}, headers := PoolStringArray(),
  method := HTTPClient.METHOD_GET, requester := HTTPRequest.new()):
-	self._id = id
-	self._uri = uri
+	self._url = url
 	self._data = data
 	self._headers = headers
+	self._private_key = private_key
 
 
 func _parse_data(data : Dictionary):
@@ -42,7 +39,7 @@ func _ready():
 	
 func _on_request_completed(result, response_code, headers, body):
 	var parsed_body = JSON.parse(body)
-	emit_signal("request_completed", _id, result, response_code, headers, parsed_body)
+	emit_signal("request_completed", result, response_code, headers, parsed_body)
 		
 
 
@@ -59,9 +56,8 @@ func _sign_url(url):
 	
 	return signed_url
 
-
 func request():
-	var url = _sign_url(_uri + "?" + _parse_data(_data))
+	var url = _sign_url(_url + "?" + _parse_data(_data))
 	_http_request.request(url, _headers, true, _method)
 	if _method == METHODS.POST:
 		printerr("POST method not implemented")
