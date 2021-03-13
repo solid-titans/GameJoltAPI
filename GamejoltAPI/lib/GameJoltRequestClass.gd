@@ -36,7 +36,6 @@ func _ready():
 	add_child(_proxy)
 	_proxy.connect("request_completed", self, "_on_request_completed")
 	
-	
 func _on_request_completed(result, response_code, headers, body):
 	var parsed_body = JSON.parse(body)
 	emit_signal("request_completed", result, response_code, headers, parsed_body)

@@ -8,6 +8,5 @@ func _init(game_id : String, username : String, user_token : String,  data := {}
 	._init(data, headers, proxy)
 
 func _ready():
-	_uri = "/sessions/open/"
-	
+	_uri = "/users/"
 	
