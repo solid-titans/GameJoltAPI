@@ -1,4 +1,5 @@
 extends "res://addons/GamejoltAPI/lib/GameJoltRequestClass.gd"
+class_name GameJoltSessionPing
 
 func _init(game_id : String, username : String, user_token : String, status := "",
  data := {}, headers := PoolStringArray(), proxy := HTTPRequest.new()):
@@ -6,7 +7,7 @@ func _init(game_id : String, username : String, user_token : String, status := "
 	self._data["username"] = username
 	self._data["user_token"] = user_token
 	self._data["status"] = status
-	._init(data, headers, proxy)
+	._init(data, headers)
 
 
 func _ready():

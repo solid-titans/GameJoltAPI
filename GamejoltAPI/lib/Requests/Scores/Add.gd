@@ -1,8 +1,9 @@
 extends "res://addons/GamejoltAPI/lib/GameJoltRequestClass.gd"
+class_name GameJoltSessionAdd
 
 func _init(game_id : String, score : String, sort : int, table_id := NAN,
  username := "", user_token := "", guest := "",
- data := {}, headers := PoolStringArray(), proxy := HTTPRequest.new()):
+ data := {}, headers := PoolStringArray()):
 	self._data["game_id"] = game_id
 	if username and user_token:
 		self._data["username"] = username
@@ -12,7 +13,7 @@ func _init(game_id : String, score : String, sort : int, table_id := NAN,
 		
 	if table_id != NAN: self._data["table_id"] = table_id
 	
-	._init(data, headers, proxy)
+	._init(data, headers)
 
 func _ready():
 	_uri = "/scores/add/"

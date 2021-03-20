@@ -10,7 +10,7 @@ enum METHODS {
 
 const _BASE_URL	 := "https://api.gamejolt.com/api/game/"
 
-onready var _proxy			: HTTPRequest
+onready var _proxy			:= HTTPRequest.new() setget set_proxy
 onready var _private_key 	: String = ProjectSettings.get_setting("GameJoltAPI/Game/PrivateKey")
 var _uri					: String
 var _method					: int = METHODS.GET
@@ -18,10 +18,9 @@ var _headers				: PoolStringArray
 var _data					: Dictionary
 
 
-func _init(data := {}, headers := PoolStringArray(), proxy := HTTPRequest.new()):
+func _init(data := {}, headers := PoolStringArray()):
 	self._data = data
 	self._headers = headers
-	self._proxy = proxy
 
 
 func _parse_data(data : Dictionary):
@@ -32,8 +31,13 @@ func _parse_data(data : Dictionary):
 	
 	return uri.rstrip("&")
 
+func set_proxy(proxy: HTTPRequest):
+	remove_child(self._proxy)
+	_proxy = proxy
+	add_child(proxy)
+	
+
 func _ready():
-	add_child(_proxy)
 	_proxy.connect("request_completed", self, "_on_request_completed")
 	
 func _on_request_completed(result, response_code, headers, body):
