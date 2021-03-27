@@ -42,6 +42,7 @@ func _ready():
 	
 func _on_request_completed(result, response_code, headers, body):
 	var parsed_body = JSON.parse(body)
+	print("Request completed")
 	emit_signal("request_completed", result, response_code, headers, parsed_body)
 		
 

@@ -3,12 +3,11 @@ extends EditorPlugin
 
 func _enter_tree():
 	
-	add_autoload_singleton("GameJoltAPI", "res://addons/GameJoltAPI/lib/GameJoltAPI.gd")
+	add_autoload_singleton("GameJoltAPI", "res://addons/GamejoltAPI/lib/GameJoltAPI.gd")
 
 	#Adding all project settings
 	add_custom_project_setting("GameJoltAPI/Game/GameID",                    "",                             TYPE_STRING)
 	add_custom_project_setting("GameJoltAPI/Game/PrivateKey",                "",                             TYPE_STRING)
-	add_custom_project_setting("GameJoltAPI/Requests/Multithread",           false,                          TYPE_BOOL)
 	add_custom_project_setting("GameJoltAPI/Requests/DownloadPath",          "user://GameJoltAPI/Downloads", TYPE_STRING)
 	add_custom_project_setting("GameJoltAPI/Debug/Verbose",                  false,                          TYPE_BOOL)
 	
