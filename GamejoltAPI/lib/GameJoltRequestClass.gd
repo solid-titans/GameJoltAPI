@@ -1,6 +1,5 @@
 extends Node
 
-
 signal request_completed(result, response_code, headers, parsed_body)
 
 enum METHODS {
@@ -22,7 +21,6 @@ func _init(data := {}, headers := PoolStringArray()):
 	self._data = data
 	self._headers = headers
 
-
 func _parse_data(data : Dictionary):
 	"""Creates an uri using a dictionary"""
 	var uri = ""
@@ -38,13 +36,14 @@ func set_proxy(proxy: HTTPRequest):
 	
 
 func _ready():
+	add_child(_proxy)
 	_proxy.connect("request_completed", self, "_on_request_completed")
 	
 func _on_request_completed(result, response_code, headers, body):
-	var parsed_body = JSON.parse(body)
-	print("Request completed")
-	emit_signal("request_completed", result, response_code, headers, parsed_body)
-		
+	var parsed_body = body.get_string_from_utf8()
+	if (parsed_body == ""): parsed_body = "{}"
+	parsed_body = JSON.parse(parsed_body) 
+	self.emit_signal("request_completed", result, response_code, headers, parsed_body)
 
 
 func _sign_url(url):
@@ -59,6 +58,7 @@ func _sign_url(url):
 	signed_url += "signature={}".format([signature])
 	
 	return signed_url
+
 
 func request():
 	var url = _sign_url(_BASE_URL + _uri + "?" + _parse_data(_data))

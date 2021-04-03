@@ -23,13 +23,7 @@ signal request_completed(id, result, response_code, headers, parsed_body, node)
 func _ready():
 	self.connect("request_completed", self, "_on_session_opened")
 	
-	#
-	#
-	# Add a callback
-	#
-	#
-
-func _on_request_completed(id, result, response_code, headers, parsed_body):
+func _on_request_completed(result, response_code, headers, parsed_body, id):
 	var node = _requests.get(id)
 	if node:
 		_print_verbose("Request " + str(id) + " completed")
@@ -39,7 +33,9 @@ func _on_request_completed(id, result, response_code, headers, parsed_body):
 	else:
 		printerr("Unable to delete request Node (maybe it's already deleted?)")
 
+
 func _on_session_opened(id, result, response_code, headers, parsed_body, node):
+	
 	if parsed_body.success == true:
 		_print_verbose("Session opened!")
 		session_status = STATUS.OK
@@ -59,12 +55,13 @@ func open_session(username : String, user_token : String):
 func make_request(request) -> int:
 	"""Create a new request object and add it as a child"""
 	_last_id += 1
-	_requests[_last_id] = request
-	print("Request added (id: " + str(_last_id) + ")")
+	var id = _last_id
+	_requests[id] = request
+	print("Request added (id: " + str(id) + ")")
 	add_child(request)
-	request.connect("request_completed", self, "_on_request_completed")
+	request.connect("request_completed", self, "_on_request_completed", [id])
 	request.request()
-	return _last_id
+	return id
 	
 	
 func _print_verbose(msg):
