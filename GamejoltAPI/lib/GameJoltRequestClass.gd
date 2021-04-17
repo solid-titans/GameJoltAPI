@@ -50,18 +50,17 @@ func _sign_url(url):
 	"""Sign the url with your game private key"""
 	var signature = (url + _private_key).sha1_text()
 	var signed_url = url
-	if url.find("?"):
+	if url.find("?") != len(url) -1:
 		signed_url += "&"
-	else:
-		signed_url += "?"
 		
-	signed_url += "signature={}".format([signature])
+	signed_url += "signature=%s" % signature
 	
 	return signed_url
 
 
 func request():
-	var url = _sign_url(_BASE_URL + _uri + "?" + _parse_data(_data))
-	_proxy.request(url, _headers, true, _method)
+	var url = _sign_url(_BASE_URL + _uri + "?" + _parse_data(self._data))
+	
+	return _proxy.request(url, _headers, true, _method)
 	if _method == METHODS.POST:
 		printerr("POST method not implemented")
