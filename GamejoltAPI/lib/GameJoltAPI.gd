@@ -35,14 +35,13 @@ func _on_request_completed(result, response_code, headers, parsed_body, id):
 
 
 func _on_session_opened(id, result, response_code, headers, parsed_body, node):
-	
+	print(parsed_body.result)
 	session_status = STATUS.OFF
-
 	if result != HTTPRequest.RESULT_SUCCESS:
 		printerr('Error trying to make a request: error code ', result)
 	elif response_code / 100 == 4 or response_code / 100 == 5:
 		printerr('Error trying to open a session: Returned error code', response_code)
-	elif not parsed_body.result or not parsed_body.result.success:
+	elif not parsed_body.result or not parsed_body.result.response.success:
 		printerr('Error trying to open a session: Request body:', parsed_body.result)
 	else:
 		_print_verbose("Session opened!")

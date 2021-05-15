@@ -7,7 +7,7 @@ enum METHODS {
 	POST = HTTPClient.METHOD_POST,
 }
 
-const _BASE_URL	 := "https://api.gamejolt.com/api/game/"
+const _BASE_URL	 := "https://api.gamejolt.com/api/game/v1_2/"
 
 onready var _proxy			:= HTTPRequest.new() setget set_proxy
 onready var _private_key 	: String = ProjectSettings.get_setting("GameJoltAPI/Game/PrivateKey")
@@ -53,14 +53,14 @@ func _sign_url(url):
 	if url.find("?") != len(url) -1:
 		signed_url += "&"
 		
-	signed_url += "signature=%s" % signature
+	signed_url += "signature=" + signature
 	
 	return signed_url
 
 
 func request():
 	var url = _sign_url(_BASE_URL + _uri + "?" + _parse_data(self._data))
-	
+	print(url)
 	return _proxy.request(url, _headers, true, _method)
 	if _method == METHODS.POST:
 		printerr("POST method not implemented")
