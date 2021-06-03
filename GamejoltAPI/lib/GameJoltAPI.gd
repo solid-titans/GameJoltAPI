@@ -10,6 +10,7 @@ onready var _username    : String
 onready var _user_token  : String
 var session_status = STATUS.OFF
 
+signal status_changed(new_status)
 
 enum STATUS {
 	OK,
@@ -33,19 +34,24 @@ func _on_request_completed(result, response_code, headers, parsed_body, id):
 	else:
 		printerr("Unable to delete request Node (maybe it's already deleted?)")
 
+func _change_status(new_status):
+	emit_signal("status_changed", new_status)
+	session_status = new_status
+
 
 func _on_session_opened(id, result, response_code, headers, parsed_body, node):
-	print(parsed_body.result)
-	session_status = STATUS.OFF
 	if result != HTTPRequest.RESULT_SUCCESS:
+		_change_status(STATUS.OFF)
 		printerr('Error trying to make a request: error code ', result)
 	elif response_code / 100 == 4 or response_code / 100 == 5:
+		_change_status(STATUS.OFF)
 		printerr('Error trying to open a session: Returned error code', response_code)
 	elif not parsed_body.result or not parsed_body.result.response.success:
+		_change_status(STATUS.OFF)
 		printerr('Error trying to open a session: Request body:', parsed_body.result)
 	else:
 		_print_verbose("Session opened!")
-		session_status = STATUS.OK
+		_change_status(STATUS.OK)
 		_game_id = node._data["game_id"]
 		_username = node._data["username"]
 		_user_token = node._data["user_token"]
